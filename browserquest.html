@@ -323,6 +323,7 @@
       <h2 class="pix">타이니 퀘스트</h2>
       <p>고요한 숲의 가장자리에서 눈을 뜬다. 풀숲엔 쥐가, 물가와 오래된 돌무더기엔 더 어두운 것들이 도사린다. 사냥하고, 강해지고, 장비를 갖춰라 — 그리고 죽지 않도록.</p>
       <p style="font-size:11px;color:var(--ink)">스스로 싸우는 <b>다른 모험가들</b>을 클릭해 대화하고 <b>파티</b>로 초대하라. <b>퀘스트</b>로 골드를 모아 <b>상인</b>(공터)에게 장비를 사고, <b>가방</b>에서 장비를 바꿔라. 강해졌다면 <b>⚔레이드</b>로 마왕에 도전하고, <b>길드·랭킹</b>으로 최강 모험가를 노려라. 스킬은 <b>1·2·3</b>.</p>
+      <p style="font-size:10px;color:#7fb0e0;line-height:1.8">동료와의 대화는 <b>claude.ai 아티팩트</b>로 열면 진짜 자연어로 이어집니다. 그 외 환경(웹 게시·로컬 파일)에서는 미리 준비된 대사로 작동합니다.</p>
       <button class="btn" id="startBtn">모험 시작</button>
       <p style="opacity:.7;font-size:10px">원작: Little Workshop / Mozilla의 BrowserQuest (MPL&nbsp;2.0)</p>
     </div>
@@ -840,13 +841,16 @@ function keyMove(){
 let chatAgent=null;
 const chatEl=document.getElementById('chat'), chatBody=document.getElementById('chatBody'),
   chatInput=document.getElementById('chatInput'), chatSend=document.getElementById('chatSend');
+// claude.ai 아티팩트 런타임에서만 window.claude.complete 가 주입된다
+function claudeOn(){ return !!(window.claude && typeof window.claude.complete==='function'); }
 function openChat(a){
   chatAgent=a; a.chatting=true; a.path=[];
   document.getElementById('chatName').textContent=a.name;
-  document.getElementById('chatRole').textContent=a.role;
+  document.getElementById('chatRole').textContent=a.role+(claudeOn()?' · 🤖 Claude':' · 오프라인');
   document.getElementById('chatDot').style.background=a.color;
   chatBody.innerHTML='';
   addMsg('sys', a.name+' · '+a.role);
+  if(!claudeOn()) addMsg('sys', '⚠ 오프라인 모드 — 미리 준비된 대사로 대화합니다. claude.ai 아티팩트로 열면 실제 자연어 대화가 됩니다.');
   if(a.history.length===0){ addMsg('them', a.greeting); say(a, a.greeting, 4, false); speak(a.greeting, a.voice, true); }
   else { for(const m of a.history) addMsg(m.role==='user'?'me':'them', m.content); }
   refreshPartyBtn();
@@ -903,7 +907,7 @@ async function sendChat(){
   chatSend.disabled=true; const typing=addMsg('them typing', a.name+' 이(가) 생각 중…');
   let reply='';
   try{
-    if(window.claude && typeof window.claude.complete==='function'){
+    if(claudeOn()){
       reply=(await window.claude.complete(buildPrompt(a))||'').trim();
     }
   }catch(err){ reply=''; }
